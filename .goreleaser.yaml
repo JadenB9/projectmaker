@@ -25,6 +25,7 @@ brews:
   - repository:
       owner: JadenB9
       name: homebrew-tap
+      token: "{{ .Env.HOMEBREW_TAP_GITHUB_TOKEN }}"
     name: project
     homepage: https://github.com/JadenB9/projectmaker
     description: TUI project scaffolder - create full-stack apps from your terminal
