@@ -79,7 +79,7 @@ func TestGitignoreGeneration(t *testing.T) {
 
 	// Run scaffold just for gitignore by creating the dir
 	clis := services.CLIStatus{Git: false} // disable git to avoid init
-	result, err := scaffold.Run(cfg, clis)
+	result, err := scaffold.Run(cfg, clis, nil)
 	if err != nil {
 		t.Fatalf("scaffold.Run failed: %v", err)
 	}
@@ -116,7 +116,7 @@ func TestEnvGeneration(t *testing.T) {
 	}
 
 	clis := services.CLIStatus{Git: false}
-	_, err := scaffold.Run(cfg, clis)
+	_, err := scaffold.Run(cfg, clis, nil)
 	if err != nil {
 		t.Fatalf("scaffold.Run failed: %v", err)
 	}

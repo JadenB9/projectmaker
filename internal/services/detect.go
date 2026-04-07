@@ -1,6 +1,7 @@
 package services
 
 import (
+	"os"
 	"os/exec"
 	"strings"
 )
@@ -50,4 +51,15 @@ func RunCmdInDir(dir, name string, args ...string) (string, error) {
 	cmd.Dir = dir
 	out, err := cmd.CombinedOutput()
 	return strings.TrimSpace(string(out)), err
+}
+
+// RunInteractive executes a command with stdin/stdout/stderr connected to the terminal.
+// Use this for interactive commands like create-next-app that need user input.
+func RunInteractive(dir, name string, args ...string) error {
+	cmd := exec.Command(name, args...)
+	cmd.Dir = dir
+	cmd.Stdin = os.Stdin
+	cmd.Stdout = os.Stdout
+	cmd.Stderr = os.Stderr
+	return cmd.Run()
 }

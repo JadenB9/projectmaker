@@ -22,15 +22,26 @@ type StepResult struct {
 	Message string
 }
 
+// StepCallback is called after each step completes, for live progress display.
+type StepCallback func(step StepResult)
+
 // Run orchestrates the full project scaffold process.
-func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
+// If onStep is non-nil, it's called after each step completes.
+func Run(cfg *config.ProjectConfig, clis services.CLIStatus, onStep StepCallback) (*Result, error) {
 	var steps []StepResult
+
+	addStep := func(s StepResult) {
+		steps = append(steps, s)
+		if onStep != nil {
+			onStep(s)
+		}
+	}
 
 	// 1. Create project directory
 	if err := os.MkdirAll(cfg.ProjectDir, 0755); err != nil {
 		return nil, fmt.Errorf("creating project directory: %w", err)
 	}
-	steps = append(steps, StepResult{
+	addStep(StepResult{
 		Name:    "Create directory",
 		Status:  "done",
 		Message: cfg.ProjectDir,
@@ -39,19 +50,19 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 	// 2. git init
 	if clis.Git {
 		if _, err := services.RunCmdInDir(cfg.ProjectDir, "git", "init"); err != nil {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Git init",
 				Status:  "manual",
 				Message: "Run: git init",
 			})
 		} else {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:   "Git init",
 				Status: "done",
 			})
 		}
 	} else {
-		steps = append(steps, StepResult{
+		addStep(StepResult{
 			Name:    "Git init",
 			Status:  "skipped",
 			Message: "git not found",
@@ -60,13 +71,13 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 
 	// 3. Write .gitignore
 	if err := writeGitignore(cfg); err != nil {
-		steps = append(steps, StepResult{
+		addStep(StepResult{
 			Name:    "Write .gitignore",
 			Status:  "manual",
 			Message: fmt.Sprintf("Failed to write .gitignore: %v", err),
 		})
 	} else {
-		steps = append(steps, StepResult{
+		addStep(StepResult{
 			Name:   "Write .gitignore",
 			Status: "done",
 		})
@@ -76,20 +87,20 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 	envVars := collectEnvVars(cfg)
 	if len(envVars) > 0 {
 		if err := writeEnvFile(cfg, envVars); err != nil {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Write .env files",
 				Status:  "manual",
 				Message: fmt.Sprintf("Failed: %v", err),
 			})
 		} else {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Write .env files",
 				Status:  "done",
 				Message: fmt.Sprintf("%d variables configured", len(envVars)),
 			})
 		}
 	} else {
-		steps = append(steps, StepResult{
+		addStep(StepResult{
 			Name:    "Write .env files",
 			Status:  "skipped",
 			Message: "No env vars needed",
@@ -98,29 +109,33 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 
 	// 5. Scaffold framework
 	frameworkSteps := scaffoldFramework(cfg, clis)
-	steps = append(steps, frameworkSteps...)
+	for _, s := range frameworkSteps {
+		addStep(s)
+	}
 
 	// 6. Install additional deps
 	depSteps := installDeps(cfg, clis)
-	steps = append(steps, depSteps...)
+	for _, s := range depSteps {
+		addStep(s)
+	}
 
 	// 7. Create GitHub repo
 	if clis.GitHub {
 		_, err := services.RunCmdInDir(cfg.ProjectDir, "gh", "repo", "create", cfg.Name, "--private", "--source=.", "--remote=origin")
 		if err != nil {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Create GitHub repo",
 				Status:  "manual",
 				Message: fmt.Sprintf("Run: gh repo create %s --private --source=. --remote=origin", cfg.Name),
 			})
 		} else {
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:   "Create GitHub repo",
 				Status: "done",
 			})
 		}
 	} else {
-		steps = append(steps, StepResult{
+		addStep(StepResult{
 			Name:    "Create GitHub repo",
 			Status:  "skipped",
 			Message: "gh CLI not found",
@@ -134,50 +149,50 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 			if clis.Vercel {
 				_, err := services.RunCmdInDir(cfg.ProjectDir, "vercel", "link", "--yes")
 				if err != nil {
-					steps = append(steps, StepResult{
+					addStep(StepResult{
 						Name:    "Link Vercel",
 						Status:  "manual",
 						Message: "Run: vercel link --yes",
 					})
 				} else {
-					steps = append(steps, StepResult{
+					addStep(StepResult{
 						Name:   "Link Vercel",
 						Status: "done",
 					})
 				}
 			} else {
-				steps = append(steps, StepResult{
+				addStep(StepResult{
 					Name:    "Link Vercel",
 					Status:  "skipped",
 					Message: "vercel CLI not found",
 				})
 			}
 		case "railway":
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Railway setup",
 				Status:  "manual",
 				Message: "Go to railway.app > New Project > Deploy from GitHub",
 			})
 		case "cloudflare":
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Cloudflare setup",
 				Status:  "manual",
 				Message: "Go to dash.cloudflare.com > Add site or Pages project",
 			})
 		case "docker":
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Docker setup",
 				Status:  "manual",
 				Message: "Add Dockerfile and docker-compose.yml to project root",
 			})
 		case "aws":
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "AWS setup",
 				Status:  "manual",
 				Message: "Configure AWS CLI and deploy via your preferred service (Lambda, ECS, EC2)",
 			})
 		case "flyio":
-			steps = append(steps, StepResult{
+			addStep(StepResult{
 				Name:    "Fly.io setup",
 				Status:  "manual",
 				Message: "Run: fly launch (install flyctl first: curl -L https://fly.io/install.sh | sh)",
@@ -246,7 +261,8 @@ func scaffoldNextJS(cfg *config.ProjectConfig, clis services.CLIStatus) []StepRe
 
 	var steps []StepResult
 
-	_, err := services.RunCmd(runner, args...)
+	// Use interactive mode so create-next-app can prompt the user
+	err := services.RunInteractive("", runner, args...)
 	if err != nil {
 		steps = append(steps, StepResult{
 			Name:    "Scaffold Next.js",
@@ -262,7 +278,7 @@ func scaffoldNextJS(cfg *config.ProjectConfig, clis services.CLIStatus) []StepRe
 
 	// shadcn init if needed
 	if cfg.Styling == "tailwind-shadcn" {
-		_, err := services.RunCmdInDir(cfg.ProjectDir, runner, "shadcn@latest", "init", "--yes")
+		err := services.RunInteractive(cfg.ProjectDir, runner, "shadcn@latest", "init", "--yes")
 		if err != nil {
 			steps = append(steps, StepResult{
 				Name:    "Init shadcn/ui",
