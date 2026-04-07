@@ -20,7 +20,7 @@ var Presets = []Preset{
 			Framework:      "nextjs",
 			Styling:        "tailwind-shadcn",
 			PackageManager: "pnpm",
-			Deployment:     "vercel",
+			Deployment:     []string{"vercel"},
 		},
 	},
 	{
@@ -35,7 +35,7 @@ var Presets = []Preset{
 			Database:       "prisma",
 			Auth:           "nextauth",
 			PackageManager: "pnpm",
-			Deployment:     "vercel",
+			Deployment:     []string{"vercel"},
 		},
 	},
 	{
@@ -63,7 +63,7 @@ var Presets = []Preset{
 			Database:       "supabase",
 			Auth:           "supabase-auth",
 			PackageManager: "pnpm",
-			Deployment:     "vercel",
+			Deployment:     []string{"vercel"},
 		},
 	},
 	{
@@ -76,7 +76,7 @@ var Presets = []Preset{
 			Framework:      "nextjs",
 			Styling:        "tailwind",
 			PackageManager: "pnpm",
-			Deployment:     "vercel",
+			Deployment:     []string{"vercel"},
 		},
 	},
 	{

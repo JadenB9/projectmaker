@@ -13,7 +13,7 @@ type ProjectConfig struct {
 	Payments       string
 	Email          string
 	PackageManager string
-	Deployment     string
+	Deployment     []string
 	Extras         []string
 	ProjectDir     string
 }

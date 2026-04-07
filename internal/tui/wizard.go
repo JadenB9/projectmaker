@@ -78,7 +78,7 @@ func buildSummary(cfg *config.ProjectConfig) string {
 		line("Payments", cfg.Payments),
 		line("Email", cfg.Email),
 		line("Pkg Manager", cfg.PackageManager),
-		line("Deployment", cfg.Deployment),
+		line("Deployment", strings.Join(cfg.Deployment, ", ")),
 		line("Extras", extras),
 	}, "\n")
 
@@ -127,7 +127,14 @@ func Run() (*config.ProjectConfig, error) {
 							}
 							dir := filepath.Join(cwd, name)
 							if info, err := os.Stat(dir); err == nil && info.IsDir() {
-								return fmt.Errorf("directory %q already exists", name)
+								return fmt.Errorf("directory %q already exists locally", name)
+							}
+							// Check if GitHub repo already exists (if gh is available)
+							if _, ghErr := exec.LookPath("gh"); ghErr == nil {
+								out, err := exec.Command("gh", "repo", "view", name, "--json", "name").CombinedOutput()
+								if err == nil && len(out) > 0 {
+									return fmt.Errorf("GitHub repo %q already exists on your account", name)
+								}
 							}
 							return nil
 						}).
@@ -292,7 +299,7 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 		value *string
 	}
 
-	steps := []customStep{
+	selectSteps := []customStep{
 		{"Language", config.Languages, &cfg.Language},
 		{"Framework", config.Frameworks, &cfg.Framework},
 		{"Styling", config.Styling, &cfg.Styling},
@@ -301,42 +308,65 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 		{"Payments", config.PaymentProviders, &cfg.Payments},
 		{"Email Provider", config.EmailProviders, &cfg.Email},
 		{"Package Manager", config.PackageManagers, &cfg.PackageManager},
-		{"Deployment Target", config.DeploymentTargets, &cfg.Deployment},
 	}
 
+	totalSteps := len(selectSteps) + 1 // +1 for deployment multi-select
 	i := 0
-	for i < len(steps) {
-		s := steps[i]
-		opts := withBack(toHuhOptions(s.opts))
+	for i < totalSteps {
+		if i < len(selectSteps) {
+			// Single-select steps
+			s := selectSteps[i]
+			opts := withBack(toHuhOptions(s.opts))
 
-		err := huh.NewForm(
-			huh.NewGroup(
-				huh.NewSelect[string]().
-					Title(s.title).
-					Options(opts...).
-					Value(s.value),
-			),
-		).Run()
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[string]().
+						Title(s.title).
+						Options(opts...).
+						Value(s.value),
+				),
+			).Run()
 
-		if isAbort(err) {
-			if i == 0 {
+			if isAbort(err) {
+				if i == 0 {
+					return true
+				}
+				i--
+				continue
+			}
+			if err != nil {
 				return true
 			}
-			i--
-			continue
-		}
-		if err != nil {
-			return true
-		}
-		if *s.value == backValue {
-			*s.value = "" // Clear the back sentinel
-			if i == 0 {
+			if *s.value == backValue {
+				*s.value = ""
+				if i == 0 {
+					return true
+				}
+				i--
+				continue
+			}
+			i++
+		} else {
+			// Deployment multi-select (last step)
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewMultiSelect[string]().
+						Title("Deployment Targets").
+						Description("Space to toggle, Enter to continue, Ctrl+C to go back").
+						Options(toHuhOptions(config.DeploymentTargets)...).
+						Value(&cfg.Deployment),
+				),
+			).Run()
+
+			if isAbort(err) {
+				i--
+				continue
+			}
+			if err != nil {
 				return true
 			}
-			i--
-			continue
+			i++
 		}
-		i++
 	}
 
 	return false

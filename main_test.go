@@ -155,7 +155,7 @@ func TestSpecGeneration(t *testing.T) {
 		Payments:       "stripe",
 		Email:          "resend",
 		PackageManager: "bun",
-		Deployment:     "vercel",
+		Deployment:     []string{"vercel"},
 		Extras:         []string{"github-actions"},
 		ProjectDir:     tmpDir,
 	}

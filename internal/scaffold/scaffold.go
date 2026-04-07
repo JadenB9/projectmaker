@@ -127,27 +127,62 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus) (*Result, error) {
 		})
 	}
 
-	// 8. Link Vercel
-	if cfg.Deployment == "vercel" && clis.Vercel {
-		_, err := services.RunCmdInDir(cfg.ProjectDir, "vercel", "link", "--yes")
-		if err != nil {
+	// 8. Link deployment targets
+	for _, dep := range cfg.Deployment {
+		switch dep {
+		case "vercel":
+			if clis.Vercel {
+				_, err := services.RunCmdInDir(cfg.ProjectDir, "vercel", "link", "--yes")
+				if err != nil {
+					steps = append(steps, StepResult{
+						Name:    "Link Vercel",
+						Status:  "manual",
+						Message: "Run: vercel link --yes",
+					})
+				} else {
+					steps = append(steps, StepResult{
+						Name:   "Link Vercel",
+						Status: "done",
+					})
+				}
+			} else {
+				steps = append(steps, StepResult{
+					Name:    "Link Vercel",
+					Status:  "skipped",
+					Message: "vercel CLI not found",
+				})
+			}
+		case "railway":
 			steps = append(steps, StepResult{
-				Name:    "Link Vercel",
+				Name:    "Railway setup",
 				Status:  "manual",
-				Message: "Run: vercel link --yes",
+				Message: "Go to railway.app > New Project > Deploy from GitHub",
 			})
-		} else {
+		case "cloudflare":
 			steps = append(steps, StepResult{
-				Name:   "Link Vercel",
-				Status: "done",
+				Name:    "Cloudflare setup",
+				Status:  "manual",
+				Message: "Go to dash.cloudflare.com > Add site or Pages project",
+			})
+		case "docker":
+			steps = append(steps, StepResult{
+				Name:    "Docker setup",
+				Status:  "manual",
+				Message: "Add Dockerfile and docker-compose.yml to project root",
+			})
+		case "aws":
+			steps = append(steps, StepResult{
+				Name:    "AWS setup",
+				Status:  "manual",
+				Message: "Configure AWS CLI and deploy via your preferred service (Lambda, ECS, EC2)",
+			})
+		case "flyio":
+			steps = append(steps, StepResult{
+				Name:    "Fly.io setup",
+				Status:  "manual",
+				Message: "Run: fly launch (install flyctl first: curl -L https://fly.io/install.sh | sh)",
 			})
 		}
-	} else if cfg.Deployment == "vercel" {
-		steps = append(steps, StepResult{
-			Name:    "Link Vercel",
-			Status:  "skipped",
-			Message: "vercel CLI not found",
-		})
 	}
 
 	return &Result{Steps: steps}, nil

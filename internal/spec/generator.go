@@ -75,7 +75,7 @@ func writeStackSummary(b *strings.Builder, cfg *config.ProjectConfig) {
 		{"Payments", cfg.Payments},
 		{"Email", cfg.Email},
 		{"Package Manager", cfg.PackageManager},
-		{"Deployment", cfg.Deployment},
+		{"Deployment", strings.Join(cfg.Deployment, ", ")},
 	}
 
 	// Filter out empty/"none" rows
@@ -244,33 +244,51 @@ func writeDevCommands(b *strings.Builder, cfg *config.ProjectConfig) {
 	b.WriteString("```\n\n")
 }
 
-// writeDeployment outputs deployment instructions based on the configured target.
+// writeDeployment outputs deployment instructions for all configured targets.
 func writeDeployment(b *strings.Builder, cfg *config.ProjectConfig) {
 	b.WriteString("## Deployment\n\n")
 
-	switch cfg.Deployment {
-	case "vercel":
-		b.WriteString("Push to GitHub (auto-deploys if linked) or run:\n\n")
-		b.WriteString("```bash\nvercel --prod\n```\n")
-	case "railway":
-		b.WriteString("1. Go to [railway.app](https://railway.app) and create a new project\n")
-		b.WriteString("2. Deploy from your GitHub repository\n")
-		b.WriteString("3. Add environment variables in the Railway dashboard\n")
-	case "cloudflare":
-		b.WriteString("1. Go to the [Cloudflare Pages dashboard](https://dash.cloudflare.com/?to=/:account/pages)\n")
-		b.WriteString("2. Create a new project and connect your GitHub repository\n")
-		b.WriteString("3. Set the build command and output directory for your framework\n")
-	case "docker":
-		b.WriteString("Build and run with Docker:\n\n")
-		b.WriteString("```bash\n")
-		b.WriteString(fmt.Sprintf("docker build -t %s .\n", cfg.Name))
-		b.WriteString(fmt.Sprintf("docker run -p 3000:3000 %s\n", cfg.Name))
-		b.WriteString("```\n")
-	default:
-		b.WriteString("No specific deployment target configured.\n")
+	if len(cfg.Deployment) == 0 {
+		b.WriteString("No specific deployment target configured.\n\n")
+		return
 	}
 
-	b.WriteString("\n")
+	for _, dep := range cfg.Deployment {
+		switch dep {
+		case "vercel":
+			b.WriteString("### Vercel (frontend / serverless)\n\n")
+			b.WriteString("Push to GitHub (auto-deploys if linked) or run:\n\n")
+			b.WriteString("```bash\nvercel --prod\n```\n\n")
+		case "railway":
+			b.WriteString("### Railway (backend / services)\n\n")
+			b.WriteString("1. Go to [railway.app](https://railway.app) and create a new project\n")
+			b.WriteString("2. Deploy from your GitHub repository\n")
+			b.WriteString("3. Add environment variables in the Railway dashboard\n\n")
+		case "cloudflare":
+			b.WriteString("### Cloudflare (DNS / CDN / edge)\n\n")
+			b.WriteString("1. Go to the [Cloudflare dashboard](https://dash.cloudflare.com)\n")
+			b.WriteString("2. Add your domain for DNS management\n")
+			b.WriteString("3. For Pages: create a project and connect your GitHub repo\n")
+			b.WriteString("4. For Workers: use `wrangler` CLI to deploy edge functions\n\n")
+		case "docker":
+			b.WriteString("### Docker (self-hosted)\n\n")
+			b.WriteString("Build and run with Docker:\n\n")
+			b.WriteString("```bash\n")
+			b.WriteString(fmt.Sprintf("docker build -t %s .\n", cfg.Name))
+			b.WriteString(fmt.Sprintf("docker run -p 3000:3000 %s\n", cfg.Name))
+			b.WriteString("```\n\n")
+		case "aws":
+			b.WriteString("### AWS\n\n")
+			b.WriteString("1. Configure AWS CLI: `aws configure`\n")
+			b.WriteString("2. Choose your service: Lambda (serverless), ECS (containers), or EC2 (VMs)\n")
+			b.WriteString("3. Set up environment variables in your chosen service's console\n\n")
+		case "flyio":
+			b.WriteString("### Fly.io (global edge)\n\n")
+			b.WriteString("1. Install flyctl: `curl -L https://fly.io/install.sh | sh`\n")
+			b.WriteString("2. Launch: `fly launch`\n")
+			b.WriteString("3. Deploy: `fly deploy`\n\n")
+		}
+	}
 }
 
 // writeArchNotes outputs a brief description of how the selected pieces connect.
