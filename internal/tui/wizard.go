@@ -13,6 +13,8 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
+const backValue = "__back__"
+
 // toHuhOptions converts a slice of config.Option to huh select options.
 func toHuhOptions(opts []config.Option) []huh.Option[string] {
 	out := make([]huh.Option[string], len(opts))
@@ -20,6 +22,12 @@ func toHuhOptions(opts []config.Option) []huh.Option[string] {
 		out[i] = huh.NewOption(o.Label, o.Value)
 	}
 	return out
+}
+
+// withBack prepends a "Go Back" option to a list of huh options.
+func withBack(opts []huh.Option[string]) []huh.Option[string] {
+	back := huh.NewOption(dimStyle().Render("<  Go Back"), backValue)
+	return append([]huh.Option[string]{back}, opts...)
 }
 
 // detectPackageManager checks which package managers are installed and returns
@@ -83,16 +91,14 @@ func dimStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(dimColor)
 }
 
-// isAbort returns true if the error indicates user pressed Escape/Ctrl+C.
+// isAbort returns true if the error indicates user pressed Ctrl+C.
 func isAbort(err error) bool {
 	return err != nil && errors.Is(err, huh.ErrUserAborted)
 }
 
 // Run launches the TUI wizard and returns the completed config.
-// Press Escape at any step to go back to the previous step.
 func Run() (*config.ProjectConfig, error) {
 	fmt.Println(welcomeBanner())
-	fmt.Println(dimStyle().Render("  Press Esc to go back at any step\n"))
 
 	cfg := &config.ProjectConfig{}
 	cwd, _ := os.Getwd()
@@ -129,7 +135,7 @@ func Run() (*config.ProjectConfig, error) {
 				),
 			).Run()
 			if isAbort(err) {
-				return nil, nil // Can't go back from first step, cancel
+				return nil, nil
 			}
 			if err != nil {
 				return nil, err
@@ -140,7 +146,9 @@ func Run() (*config.ProjectConfig, error) {
 			step++
 
 		case 1: // Stack selection
-			stackOptions := make([]huh.Option[string], 0, len(config.Presets)+1)
+			stackOptions := make([]huh.Option[string], 0, len(config.Presets)+2)
+			// Add back option
+			stackOptions = append(stackOptions, huh.NewOption(dimStyle().Render("<  Go Back"), backValue))
 			for _, p := range config.Presets {
 				label := fmt.Sprintf("%s  %s", p.Name, dimStyle().Render(p.Description))
 				stackOptions = append(stackOptions, huh.NewOption(label, p.Name))
@@ -165,19 +173,23 @@ func Run() (*config.ProjectConfig, error) {
 			if err != nil {
 				return nil, err
 			}
+			if stackChoice == backValue {
+				step--
+				continue
+			}
 
 			if stackChoice == "custom" {
 				cfg.Stack = "custom"
-				step = 2 // Go to custom flow
+				step = 2
 			} else {
 				applyPreset(cfg, stackChoice)
-				step = 3 // Skip custom, go to extras
+				step = 3
 			}
 
-		case 2: // Custom stack flow (3 groups with back support)
+		case 2: // Custom stack flow
 			backFromCustom := runCustomFlow(cfg)
 			if backFromCustom {
-				step = 1 // Back to stack selection
+				step = 1
 				continue
 			}
 			step = 3
@@ -191,7 +203,7 @@ func Run() (*config.ProjectConfig, error) {
 				huh.NewGroup(
 					huh.NewMultiSelect[string]().
 						Title("Extras").
-						Description("Space to toggle, Enter to continue").
+						Description("Space to toggle, Enter to continue, Ctrl+C to go back").
 						Options(toHuhOptions(config.ExtraOptions)...).
 						Value(&cfg.Extras),
 				),
@@ -231,11 +243,10 @@ func Run() (*config.ProjectConfig, error) {
 			}
 
 			if !confirmed {
-				step = 3 // Go back to extras
+				step = 3
 				continue
 			}
 
-			// Set project directory
 			cfg.ProjectDir = filepath.Join(cwd, cfg.Name)
 			fmt.Println(successStyle.Render("\n  Let's build it!"))
 			return cfg, nil
@@ -289,24 +300,34 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 	i := 0
 	for i < len(steps) {
 		s := steps[i]
+		opts := withBack(toHuhOptions(s.opts))
+
 		err := huh.NewForm(
 			huh.NewGroup(
 				huh.NewSelect[string]().
 					Title(s.title).
-					Options(toHuhOptions(s.opts)...).
+					Options(opts...).
 					Value(s.value),
 			),
 		).Run()
 
 		if isAbort(err) {
 			if i == 0 {
-				return true // Back to stack selection
+				return true
 			}
 			i--
 			continue
 		}
 		if err != nil {
 			return true
+		}
+		if *s.value == backValue {
+			*s.value = "" // Clear the back sentinel
+			if i == 0 {
+				return true
+			}
+			i--
+			continue
 		}
 		i++
 	}
