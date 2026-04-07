@@ -147,12 +147,13 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus, onStep StepCallback
 		switch dep {
 		case "vercel":
 			if clis.Vercel {
-				_, err := services.RunCmdInDir(cfg.ProjectDir, "vercel", "link", "--yes")
+				// Run interactively so user can confirm project linking
+				err := services.RunInteractive(cfg.ProjectDir, "vercel", "link", "--yes")
 				if err != nil {
 					addStep(StepResult{
 						Name:    "Link Vercel",
 						Status:  "manual",
-						Message: "Run: vercel link --yes",
+						Message: "Run: vercel link",
 					})
 				} else {
 					addStep(StepResult{
@@ -164,7 +165,7 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus, onStep StepCallback
 				addStep(StepResult{
 					Name:    "Link Vercel",
 					Status:  "skipped",
-					Message: "vercel CLI not found",
+					Message: "vercel CLI not found — install: npm i -g vercel",
 				})
 			}
 		case "railway":

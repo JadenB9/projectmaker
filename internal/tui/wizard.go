@@ -119,9 +119,10 @@ func Run() (*config.ProjectConfig, error) {
 				huh.NewGroup(
 					huh.NewInput().
 						Title("Project Name").
+						Description("lowercase, no spaces (will be auto-converted)").
 						Placeholder(defaultName).
 						Validate(func(s string) error {
-							name := s
+							name := sanitizeName(s)
 							if name == "" {
 								name = defaultName
 							}
@@ -150,6 +151,7 @@ func Run() (*config.ProjectConfig, error) {
 			if cfg.Name == "" {
 				cfg.Name = defaultName
 			}
+			cfg.Name = sanitizeName(cfg.Name)
 			step++
 
 		case 1: // Stack selection
@@ -370,4 +372,20 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 	}
 
 	return false
+}
+
+// sanitizeName converts a project name to a valid npm/directory name.
+// Lowercases, replaces spaces with hyphens, removes invalid characters.
+func sanitizeName(name string) string {
+	name = strings.ToLower(name)
+	name = strings.ReplaceAll(name, " ", "-")
+	name = strings.ReplaceAll(name, "_", "-")
+	// Remove any characters that aren't alphanumeric, hyphens, or dots
+	var clean strings.Builder
+	for _, r := range name {
+		if (r >= 'a' && r <= 'z') || (r >= '0' && r <= '9') || r == '-' || r == '.' {
+			clean.WriteRune(r)
+		}
+	}
+	return clean.String()
 }
