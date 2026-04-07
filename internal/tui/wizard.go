@@ -1,6 +1,7 @@
 package tui
 
 import (
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -77,121 +78,171 @@ func buildSummary(cfg *config.ProjectConfig) string {
 	return header + "\n" + boxStyle.Render(lines)
 }
 
-// dimStyle returns a style for dimmed text (helper to avoid exporting the var).
+// dimStyle returns a style for dimmed text.
 func dimStyle() lipgloss.Style {
 	return lipgloss.NewStyle().Foreground(dimColor)
 }
 
+// isAbort returns true if the error indicates user pressed Escape/Ctrl+C.
+func isAbort(err error) bool {
+	return err != nil && errors.Is(err, huh.ErrUserAborted)
+}
+
 // Run launches the TUI wizard and returns the completed config.
+// Press Escape at any step to go back to the previous step.
 func Run() (*config.ProjectConfig, error) {
 	fmt.Println(welcomeBanner())
+	fmt.Println(dimStyle().Render("  Press Esc to go back at any step\n"))
 
 	cfg := &config.ProjectConfig{}
-
-	// Default project name to current directory name.
+	cwd, _ := os.Getwd()
 	defaultName := "my-project"
-	if wd, err := os.Getwd(); err == nil {
-		defaultName = filepath.Base(wd)
+	if cwd != "" {
+		defaultName = filepath.Base(cwd)
 	}
 	cfg.Name = defaultName
 
-	// --- Step 1: Project name ---
-	nameForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewInput().
-				Title("Project Name").
-				Placeholder(defaultName).
-				Value(&cfg.Name),
-		),
-	)
-	if err := nameForm.Run(); err != nil {
-		return nil, err
-	}
-	if cfg.Name == "" {
-		cfg.Name = defaultName
-	}
-
-	// --- Step 2: Stack selection ---
-	stackOptions := make([]huh.Option[string], 0, len(config.Presets)+1)
-	for _, p := range config.Presets {
-		label := fmt.Sprintf("%s  %s", p.Name, dimStyle().Render(p.Description))
-		stackOptions = append(stackOptions, huh.NewOption(label, p.Name))
-	}
-	stackOptions = append(stackOptions, huh.NewOption(
-		fmt.Sprintf("Custom Stack  %s", dimStyle().Render("pick each layer yourself")),
-		"custom",
-	))
-
 	var stackChoice string
-	stackForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Choose a Stack").
-				Options(stackOptions...).
-				Value(&stackChoice),
-		),
-	)
-	if err := stackForm.Run(); err != nil {
-		return nil, err
-	}
 
-	// --- Step 3: Apply preset or walk custom flow ---
-	if stackChoice == "custom" {
-		cfg.Stack = "custom"
-		if err := runCustomFlow(cfg); err != nil {
-			return nil, err
+	// Steps: 0=name, 1=stack, 2=custom(if needed), 3=extras, 4=confirm
+	step := 0
+	for step >= 0 {
+		switch step {
+		case 0: // Project name
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewInput().
+						Title("Project Name").
+						Placeholder(defaultName).
+						Validate(func(s string) error {
+							name := s
+							if name == "" {
+								name = defaultName
+							}
+							dir := filepath.Join(cwd, name)
+							if info, err := os.Stat(dir); err == nil && info.IsDir() {
+								return fmt.Errorf("directory %q already exists", name)
+							}
+							return nil
+						}).
+						Value(&cfg.Name),
+				),
+			).Run()
+			if isAbort(err) {
+				return nil, nil // Can't go back from first step, cancel
+			}
+			if err != nil {
+				return nil, err
+			}
+			if cfg.Name == "" {
+				cfg.Name = defaultName
+			}
+			step++
+
+		case 1: // Stack selection
+			stackOptions := make([]huh.Option[string], 0, len(config.Presets)+1)
+			for _, p := range config.Presets {
+				label := fmt.Sprintf("%s  %s", p.Name, dimStyle().Render(p.Description))
+				stackOptions = append(stackOptions, huh.NewOption(label, p.Name))
+			}
+			stackOptions = append(stackOptions, huh.NewOption(
+				fmt.Sprintf("Custom Stack  %s", dimStyle().Render("pick each layer yourself")),
+				"custom",
+			))
+
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewSelect[string]().
+						Title("Choose a Stack").
+						Options(stackOptions...).
+						Value(&stackChoice),
+				),
+			).Run()
+			if isAbort(err) {
+				step--
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+
+			if stackChoice == "custom" {
+				cfg.Stack = "custom"
+				step = 2 // Go to custom flow
+			} else {
+				applyPreset(cfg, stackChoice)
+				step = 3 // Skip custom, go to extras
+			}
+
+		case 2: // Custom stack flow (3 groups with back support)
+			backFromCustom := runCustomFlow(cfg)
+			if backFromCustom {
+				step = 1 // Back to stack selection
+				continue
+			}
+			step = 3
+
+		case 3: // Extras
+			if cfg.PackageManager == "" {
+				cfg.PackageManager = detectPackageManager()
+			}
+
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewMultiSelect[string]().
+						Title("Extras").
+						Description("Space to toggle, Enter to continue").
+						Options(toHuhOptions(config.ExtraOptions)...).
+						Value(&cfg.Extras),
+				),
+			).Run()
+			if isAbort(err) {
+				if stackChoice == "custom" {
+					step = 2
+				} else {
+					step = 1
+				}
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+			step++
+
+		case 4: // Confirm
+			fmt.Println(buildSummary(cfg))
+
+			var confirmed bool
+			err := huh.NewForm(
+				huh.NewGroup(
+					huh.NewConfirm().
+						Title("Create this project?").
+						Affirmative("Yes, create it").
+						Negative("No, go back").
+						Value(&confirmed),
+				),
+			).Run()
+			if isAbort(err) {
+				step = 3
+				continue
+			}
+			if err != nil {
+				return nil, err
+			}
+
+			if !confirmed {
+				step = 3 // Go back to extras
+				continue
+			}
+
+			// Set project directory
+			cfg.ProjectDir = filepath.Join(cwd, cfg.Name)
+			fmt.Println(successStyle.Render("\n  Let's build it!"))
+			return cfg, nil
 		}
-	} else {
-		applyPreset(cfg, stackChoice)
 	}
 
-	// Resolve package manager if empty.
-	if cfg.PackageManager == "" {
-		cfg.PackageManager = detectPackageManager()
-	}
-
-	// --- Step 4: Extras (always asked) ---
-	extrasForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewMultiSelect[string]().
-				Title("Extras").
-				Options(toHuhOptions(config.ExtraOptions)...).
-				Value(&cfg.Extras),
-		),
-	)
-	if err := extrasForm.Run(); err != nil {
-		return nil, err
-	}
-
-	// --- Step 5: Show summary and confirm ---
-	fmt.Println(buildSummary(cfg))
-
-	var confirmed bool
-	confirmForm := huh.NewForm(
-		huh.NewGroup(
-			huh.NewConfirm().
-				Title("Create this project?").
-				Affirmative("Yes").
-				Negative("No").
-				Value(&confirmed),
-		),
-	)
-	if err := confirmForm.Run(); err != nil {
-		return nil, err
-	}
-
-	if !confirmed {
-		fmt.Println(errorStyle.Render("Cancelled."))
-		return nil, nil
-	}
-
-	// Set project directory.
-	if wd, err := os.Getwd(); err == nil {
-		cfg.ProjectDir = filepath.Join(wd, cfg.Name)
-	}
-
-	fmt.Println(successStyle.Render("Let's build it!"))
-	return cfg, nil
+	return nil, nil
 }
 
 // applyPreset copies a preset's config values into cfg.
@@ -214,56 +265,51 @@ func applyPreset(cfg *config.ProjectConfig, name string) {
 	}
 }
 
-// runCustomFlow walks through each config layer with select fields,
-// organized into 3 groups within a single form.
-func runCustomFlow(cfg *config.ProjectConfig) error {
-	form := huh.NewForm(
-		// Group 1: Core stack
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Language").
-				Options(toHuhOptions(config.Languages)...).
-				Value(&cfg.Language),
-			huh.NewSelect[string]().
-				Title("Framework").
-				Options(toHuhOptions(config.Frameworks)...).
-				Value(&cfg.Framework),
-			huh.NewSelect[string]().
-				Title("Styling").
-				Options(toHuhOptions(config.Styling)...).
-				Value(&cfg.Styling),
-		),
-		// Group 2: Backend services
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Database / ORM").
-				Options(toHuhOptions(config.Databases)...).
-				Value(&cfg.Database),
-			huh.NewSelect[string]().
-				Title("Authentication").
-				Options(toHuhOptions(config.AuthProviders)...).
-				Value(&cfg.Auth),
-			huh.NewSelect[string]().
-				Title("Payments").
-				Options(toHuhOptions(config.PaymentProviders)...).
-				Value(&cfg.Payments),
-			huh.NewSelect[string]().
-				Title("Email Provider").
-				Options(toHuhOptions(config.EmailProviders)...).
-				Value(&cfg.Email),
-		),
-		// Group 3: Tooling
-		huh.NewGroup(
-			huh.NewSelect[string]().
-				Title("Package Manager").
-				Options(toHuhOptions(config.PackageManagers)...).
-				Value(&cfg.PackageManager),
-			huh.NewSelect[string]().
-				Title("Deployment Target").
-				Options(toHuhOptions(config.DeploymentTargets)...).
-				Value(&cfg.Deployment),
-		),
-	)
+// runCustomFlow walks through each config layer with individual steps.
+// Returns true if user wants to go back to stack selection.
+func runCustomFlow(cfg *config.ProjectConfig) bool {
+	type customStep struct {
+		title string
+		opts  []config.Option
+		value *string
+	}
 
-	return form.Run()
+	steps := []customStep{
+		{"Language", config.Languages, &cfg.Language},
+		{"Framework", config.Frameworks, &cfg.Framework},
+		{"Styling", config.Styling, &cfg.Styling},
+		{"Database / ORM", config.Databases, &cfg.Database},
+		{"Authentication", config.AuthProviders, &cfg.Auth},
+		{"Payments", config.PaymentProviders, &cfg.Payments},
+		{"Email Provider", config.EmailProviders, &cfg.Email},
+		{"Package Manager", config.PackageManagers, &cfg.PackageManager},
+		{"Deployment Target", config.DeploymentTargets, &cfg.Deployment},
+	}
+
+	i := 0
+	for i < len(steps) {
+		s := steps[i]
+		err := huh.NewForm(
+			huh.NewGroup(
+				huh.NewSelect[string]().
+					Title(s.title).
+					Options(toHuhOptions(s.opts)...).
+					Value(s.value),
+			),
+		).Run()
+
+		if isAbort(err) {
+			if i == 0 {
+				return true // Back to stack selection
+			}
+			i--
+			continue
+		}
+		if err != nil {
+			return true
+		}
+		i++
+	}
+
+	return false
 }
