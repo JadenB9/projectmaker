@@ -15,6 +15,22 @@ var Languages = []Option{
 	{Label: "Rust", Value: "rust"},
 	{Label: "Ruby", Value: "ruby"},
 	{Label: "PHP", Value: "php"},
+	{Label: "Java", Value: "java"},
+	{Label: "Kotlin", Value: "kotlin"},
+	{Label: "C#", Value: "csharp"},
+	{Label: "C++", Value: "cpp"},
+	{Label: "C", Value: "c"},
+	{Label: "Swift", Value: "swift"},
+	{Label: "Dart", Value: "dart"},
+	{Label: "Elixir", Value: "elixir"},
+	{Label: "Scala", Value: "scala"},
+	{Label: "Zig", Value: "zig"},
+	{Label: "Lua", Value: "lua"},
+	{Label: "R", Value: "r"},
+	{Label: "Perl", Value: "perl"},
+	{Label: "Haskell", Value: "haskell"},
+	{Label: "OCaml", Value: "ocaml"},
+	{Label: "Clojure", Value: "clojure"},
 }
 
 // Frameworks lists all supported frontend and backend frameworks.

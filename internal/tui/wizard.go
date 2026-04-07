@@ -150,11 +150,18 @@ func Run() (*config.ProjectConfig, error) {
 			// Add back option
 			stackOptions = append(stackOptions, huh.NewOption(dimStyle().Render("<  Go Back"), backValue))
 			for _, p := range config.Presets {
-				label := fmt.Sprintf("%s  %s", p.Name, dimStyle().Render(p.Description))
+				label := fmt.Sprintf("%s  %s\n%s",
+					p.Name,
+					dimStyle().Render(p.Description),
+					dimStyle().Render("     "+p.UseCase),
+				)
 				stackOptions = append(stackOptions, huh.NewOption(label, p.Name))
 			}
 			stackOptions = append(stackOptions, huh.NewOption(
-				fmt.Sprintf("Custom Stack  %s", dimStyle().Render("pick each layer yourself")),
+				fmt.Sprintf("Custom Stack  %s\n%s",
+					dimStyle().Render("Build your own from scratch"),
+					dimStyle().Render("     Pick every layer yourself — language, framework, DB, auth, and more"),
+				),
 				"custom",
 			))
 
