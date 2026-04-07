@@ -1,0 +1,43 @@
+version: 2
+
+builds:
+  - binary: project
+    env:
+      - CGO_ENABLED=0
+    goos:
+      - linux
+      - darwin
+      - windows
+    goarch:
+      - amd64
+      - arm64
+    ldflags:
+      - -s -w
+
+archives:
+  - format: tar.gz
+    name_template: "project_{{ .Version }}_{{ .Os }}_{{ .Arch }}"
+    format_overrides:
+      - goos: windows
+        format: zip
+
+brews:
+  - repository:
+      owner: JadenB9
+      name: homebrew-tap
+    name: project
+    homepage: https://github.com/JadenB9/projectmaker
+    description: TUI project scaffolder - create full-stack apps from your terminal
+    license: MIT
+    install: |
+      bin.install "project"
+
+checksum:
+  name_template: checksums.txt
+
+changelog:
+  sort: asc
+  filters:
+    exclude:
+      - "^docs:"
+      - "^test:"
