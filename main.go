@@ -28,6 +28,31 @@ func main() {
 	// Detect available CLIs
 	clis := services.DetectCLIs()
 
+	// Check authentication for selected services
+	tui.PrintDivider()
+	fmt.Println()
+	checks := services.CheckAuth(clis, cfg.Deployment)
+	allReady := tui.PrintAuthChecks(checks)
+
+	// If any service isn't authenticated, offer to log in
+	if !allReady {
+		for _, check := range checks {
+			if !check.Ready && canLogin(check.Service) {
+				if tui.AskLogin(check.Service) {
+					fmt.Println()
+					if err := services.LoginService(check.Service); err != nil {
+						tui.PrintError(fmt.Sprintf("Failed to log in to %s: %v", check.Service, err))
+					} else {
+						fmt.Println(tui.DimText(fmt.Sprintf("  Logged in to %s", check.Service)))
+					}
+					fmt.Println()
+					// Re-detect CLIs after login
+					clis = services.DetectCLIs()
+				}
+			}
+		}
+	}
+
 	// Run scaffold with live progress
 	tui.PrintDivider()
 	fmt.Println()
@@ -68,4 +93,8 @@ func main() {
 	}
 	os.Chdir(cfg.ProjectDir)
 	syscall.Exec(shellPath, []string{filepath.Base(shell)}, os.Environ())
+}
+
+func canLogin(service string) bool {
+	return service == "GitHub" || service == "Vercel"
 }

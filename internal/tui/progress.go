@@ -5,8 +5,10 @@ import (
 	"strings"
 	"time"
 
+	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 	"github.com/JadenB9/projectmaker/internal/scaffold"
+	"github.com/JadenB9/projectmaker/internal/services"
 )
 
 var (
@@ -70,6 +72,49 @@ func PrintProjectReady(projectName string) {
 // DimText returns styled dim text.
 func DimText(s string) string {
 	return dimStyle().Render(s)
+}
+
+// PrintAuthChecks displays authentication status for each service.
+// Returns true if all services are authenticated.
+func PrintAuthChecks(checks []services.AuthCheck) bool {
+	fmt.Println(titleStyle.Render("  Checking connections"))
+	fmt.Println()
+
+	allReady := true
+	for _, c := range checks {
+		time.Sleep(100 * time.Millisecond)
+		if c.Ready {
+			user := ""
+			if c.User != "" {
+				user = dimStyle().Render(" (" + c.User + ")")
+			}
+			fmt.Printf("%s%s%s\n", doneIcon, c.Service, user)
+		} else {
+			fmt.Printf("%s%s\n", todoIcon, c.Service)
+			fmt.Println(lipgloss.NewStyle().Foreground(dimColor).PaddingLeft(12).Render(c.Message))
+			allReady = false
+		}
+	}
+	fmt.Println()
+	return allReady
+}
+
+// AskLogin prompts the user to log in to a service.
+func AskLogin(service string) bool {
+	var login bool
+	err := huh.NewForm(
+		huh.NewGroup(
+			huh.NewConfirm().
+				Title(fmt.Sprintf("Log in to %s now?", service)).
+				Affirmative("Yes").
+				Negative("Skip").
+				Value(&login),
+		),
+	).Run()
+	if err != nil {
+		return false
+	}
+	return login
 }
 
 // PrintError displays a styled error message.
