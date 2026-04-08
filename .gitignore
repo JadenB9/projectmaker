@@ -1,0 +1,5 @@
+project
+projectmaker
+*.exe
+.DS_Store
+dist/
