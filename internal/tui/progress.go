@@ -110,7 +110,7 @@ func AskLogin(service string) bool {
 				Negative("Skip").
 				Value(&login),
 		),
-	).Run()
+	).WithKeyMap(quitKeyMap()).Run()
 	if err != nil {
 		return false
 	}

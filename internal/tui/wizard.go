@@ -9,9 +9,17 @@ import (
 	"strings"
 
 	"github.com/JadenB9/projectmaker/internal/config"
+	"github.com/charmbracelet/bubbles/key"
 	"github.com/charmbracelet/huh"
 	"github.com/charmbracelet/lipgloss"
 )
+
+// quitKeyMap returns a huh KeyMap with Escape added to the Quit binding.
+func quitKeyMap() *huh.KeyMap {
+	km := huh.NewDefaultKeyMap()
+	km.Quit = key.NewBinding(key.WithKeys("ctrl+c", "esc"), key.WithHelp("esc", "quit"))
+	return km
+}
 
 const backValue = "__back__"
 
@@ -135,7 +143,7 @@ func Run() (*config.ProjectConfig, error) {
 						}).
 						Value(&cfg.Name),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 			if isAbort(err) {
 				return nil, nil
 			}
@@ -172,7 +180,7 @@ func Run() (*config.ProjectConfig, error) {
 						Options(stackOptions...).
 						Value(&stackChoice),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 			if isAbort(err) {
 				step--
 				continue
@@ -214,7 +222,7 @@ func Run() (*config.ProjectConfig, error) {
 						Options(toHuhOptions(config.ExtraOptions)...).
 						Value(&cfg.Extras),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 			if isAbort(err) {
 				if stackChoice == "custom" {
 					step = 2
@@ -240,7 +248,7 @@ func Run() (*config.ProjectConfig, error) {
 						Negative("No, go back").
 						Value(&confirmed),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 			if isAbort(err) {
 				step = 3
 				continue
@@ -318,7 +326,7 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 						Options(opts...).
 						Value(s.value),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 
 			if isAbort(err) {
 				if i == 0 {
@@ -349,7 +357,7 @@ func runCustomFlow(cfg *config.ProjectConfig) bool {
 						Options(toHuhOptions(config.DeploymentTargets)...).
 						Value(&cfg.Deployment),
 				),
-			).Run()
+			).WithKeyMap(quitKeyMap()).Run()
 
 			if isAbort(err) {
 				i--
