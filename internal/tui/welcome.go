@@ -1,19 +1,27 @@
 package tui
 
-import "fmt"
+import (
+	"fmt"
 
-const Version = "0.5.2"
+	"github.com/charmbracelet/lipgloss"
+)
+
+const Version = "0.5.3"
 
 func welcomeBanner() string {
-	art := ` ___  ___  ___    _ ___ ___ _____
-| _ \| _ \/ _ \  | | __/ __|_   _|
-|  _/|   / (_) | | | _| (__  | |
-|_|  |_|_\___/\_/ |___|\___| |_|`
+	// Use a plain style with just color — no margins or padding that break alignment
+	artStyle := lipgloss.NewStyle().Bold(true).Foreground(primary)
+
+	art := "" +
+		" ___  ___  ___    _ ___ ___ _____\n" +
+		"| _ \\| _ \\/ _ \\  | | __/ __|_   _|\n" +
+		"|  _/|   / (_) | | | _| (__  | |\n" +
+		"|_|  |_|_\\___/\\_/ |___|\\___| |_|"
 
 	line := "─────────────────────────────────"
 
-	return fmt.Sprintf("%s\n%s\n%s\n",
-		titleStyle.Render(art),
+	return fmt.Sprintf("\n%s\n%s\n%s\n",
+		artStyle.Render(art),
 		dimStyle().Render(line),
 		dimStyle().Render(fmt.Sprintf("  v%s — Scaffold your next project in seconds", Version)),
 	)
