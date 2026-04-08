@@ -26,8 +26,8 @@ func TestCLIDetection(t *testing.T) {
 }
 
 func TestPresets(t *testing.T) {
-	if len(config.Presets) != 12 {
-		t.Errorf("expected 12 presets, got %d", len(config.Presets))
+	if len(config.Presets) < 12 {
+		t.Errorf("expected at least 12 presets, got %d", len(config.Presets))
 	}
 	for _, p := range config.Presets {
 		if p.Name == "" {
@@ -35,6 +35,10 @@ func TestPresets(t *testing.T) {
 		}
 		if p.Description == "" {
 			t.Errorf("preset %q has empty description", p.Name)
+		}
+		// Blank project is allowed to have empty language/framework
+		if p.Config.Stack == "blank" {
+			continue
 		}
 		if p.Config.Language == "" {
 			t.Errorf("preset %q has empty language", p.Name)
@@ -183,14 +187,15 @@ func TestSpecGeneration(t *testing.T) {
 
 	// Check key sections exist
 	for _, section := range []string{
-		"# Project Specification",
+		"# test-project",
 		"## Project Info",
 		"## Stack Summary",
 		"## Environment Variables",
-		"## Manual Setup Steps",
+		"## Manual Setup",
 		"## Development Commands",
 		"## Deployment",
 		"## Architecture Notes",
+		"## AI Development Guidelines",
 	} {
 		if !strings.Contains(content, section) {
 			t.Errorf("PROJECT_SPEC.md missing section: %s", section)

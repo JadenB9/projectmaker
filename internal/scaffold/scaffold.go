@@ -107,16 +107,18 @@ func Run(cfg *config.ProjectConfig, clis services.CLIStatus, onStep StepCallback
 		})
 	}
 
-	// 5. Scaffold framework
-	frameworkSteps := scaffoldFramework(cfg, clis)
-	for _, s := range frameworkSteps {
-		addStep(s)
-	}
+	// 5. Scaffold framework (skip for blank projects)
+	if cfg.Stack != "blank" && cfg.Stack != "Blank Project" {
+		frameworkSteps := scaffoldFramework(cfg, clis)
+		for _, s := range frameworkSteps {
+			addStep(s)
+		}
 
-	// 6. Install additional deps
-	depSteps := installDeps(cfg, clis)
-	for _, s := range depSteps {
-		addStep(s)
+		// 6. Install additional deps
+		depSteps := installDeps(cfg, clis)
+		for _, s := range depSteps {
+			addStep(s)
+		}
 	}
 
 	// 7. Create GitHub repo

@@ -25,27 +25,40 @@ project version      # Show version
 
 ## What it does
 
-- **12 preset stacks** — Next.js, T3, MERN, Supabase, Convex, SvelteKit, Nuxt, Rails, Django, FastAPI, Go+HTMX, Laravel
+- **13 preset stacks** — Blank Project, Next.js, T3, MERN, Supabase, Convex, SvelteKit, Nuxt, Rails, Django, FastAPI, Go+HTMX, Laravel
+- **Blank Project mode** — just GitHub + .gitignore + .env + PROJECT_SPEC.md, no runtime setup
 - **Custom stack builder** — pick every layer: language, framework, styling, DB, auth, payments, email, package manager, deployment
 - **23 languages** — TypeScript, Python, Go, Rust, Java, Kotlin, Swift, and more
 - **Auto-scaffolding** — runs `create-next-app`, `create-vite`, etc. interactively
 - **GitHub integration** — creates repo, sets remote, validates name availability
-- **Vercel integration** — links project after scaffolding
-- **Auth checks** — verifies GitHub and Vercel are authenticated before building
+- **Vercel integration** — links project interactively after scaffolding
+- **Auth checks** — verifies GitHub and Vercel are authenticated, offers to log in
 - **Multi-deploy** — select multiple targets (Vercel + Railway + Cloudflare)
 - **Environment setup** — generates `.env` with placeholders and `.env.example`
-- **PROJECT_SPEC.md** — always generated as the source of truth for AI or human setup
+- **PROJECT_SPEC.md** — source of truth with manual steps at top, AI guidelines included
 - **Project removal** — `project remove` deletes local dir + GitHub repo with confirmation
+- **Descriptions everywhere** — every option explains what it does, beginner-friendly
 
 ## How it works
 
 1. Name your project (auto-lowercase, checks GitHub for conflicts)
-2. Pick a preset stack or build custom
+2. Pick a preset stack or build custom (Blank Project for GitHub-only setup)
 3. Select deployment targets and extras
 4. Confirm your choices
 5. Auth check — verifies connections, offers to log in
 6. Scaffold — steps animate as they complete
 7. Press Enter — clears screen, drops you into the project directory
+
+## PROJECT_SPEC.md
+
+Every project gets a `PROJECT_SPEC.md` that includes:
+
+- **Manual setup steps** at the top so you see them first
+- Stack summary, environment variables, dev commands, deployment docs
+- **AI guidelines** — instructions for any AI tool working in the project:
+  - No co-authoring or AI attribution in commits
+  - Code should look student-written, not AI-generated
+  - Security-first development practices
 
 ## Requirements
 

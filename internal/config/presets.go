@@ -11,6 +11,14 @@ type Preset struct {
 // Presets contains all available stack presets.
 var Presets = []Preset{
 	{
+		Name:        "Blank Project",
+		Description: "GitHub repo + .gitignore + .env + PROJECT_SPEC.md only",
+		UseCase:     "Start from scratch — just connect to GitHub, no runtime setup",
+		Config: ProjectConfig{
+			Stack: "blank",
+		},
+	},
+	{
 		Name:        "Next.js Full-Stack",
 		Description: "Next.js App Router + TypeScript + Tailwind + shadcn/ui",
 		UseCase:     "SaaS apps, dashboards, marketing sites, landing pages",
