@@ -8,6 +8,7 @@ import (
 	"path/filepath"
 	"syscall"
 
+	"github.com/JadenB9/projectmaker/internal/remove"
 	"github.com/JadenB9/projectmaker/internal/scaffold"
 	"github.com/JadenB9/projectmaker/internal/services"
 	"github.com/JadenB9/projectmaker/internal/spec"
@@ -15,6 +16,36 @@ import (
 )
 
 func main() {
+	// Check for subcommands
+	if len(os.Args) > 1 {
+		switch os.Args[1] {
+		case "remove", "rm", "delete":
+			remove.Run()
+			return
+		case "help", "--help", "-h":
+			printHelp()
+			return
+		case "version", "--version", "-v":
+			fmt.Println("projectmaker v0.4.0")
+			return
+		}
+	}
+
+	// Default: run the create wizard
+	runCreate()
+}
+
+func printHelp() {
+	fmt.Println()
+	fmt.Println(tui.DimText("  Usage:"))
+	fmt.Println("    project              Create a new project")
+	fmt.Println("    project remove       Delete a project (local + GitHub)")
+	fmt.Println("    project help         Show this help")
+	fmt.Println("    project version      Show version")
+	fmt.Println()
+}
+
+func runCreate() {
 	cfg, err := tui.Run()
 	if err != nil {
 		tui.PrintError(err.Error())
@@ -46,7 +77,6 @@ func main() {
 						fmt.Println(tui.DimText(fmt.Sprintf("  Logged in to %s", check.Service)))
 					}
 					fmt.Println()
-					// Re-detect CLIs after login
 					clis = services.DetectCLIs()
 				}
 			}
