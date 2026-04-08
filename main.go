@@ -26,7 +26,7 @@ func main() {
 			printHelp()
 			return
 		case "version", "--version", "-v":
-			fmt.Println("projectmaker v0.5.0")
+			fmt.Println("projectmaker v" + tui.Version)
 			return
 		}
 	}

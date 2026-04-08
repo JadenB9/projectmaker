@@ -2,16 +2,20 @@ package tui
 
 import "fmt"
 
+const Version = "0.5.1"
+
 func welcomeBanner() string {
-	banner := `
-                 _           _                 _
-  _ __ _ _ ___  (_) ___  __ | |_  _ __   __ _ | | __ ___  _ _
- | '_ \ '_/ _ \ | |/ -_)/ _||  _|| '  \ / _' || |/ // -_)| '_|
- | .__/_| \___/_/ |\___|\__| \__||_|_|_|\__,_||_|\_\\___||_|
- |_|          |__/
-`
-	return fmt.Sprintf("%s\n%s",
-		titleStyle.Render(banner),
-		subtitleStyle.Render("  Scaffold your next project in seconds"),
+	art := "" +
+		" ___  ___  ___    _ ___ ___ _____\n" +
+		"| _ \\| _ \\/ _ \\  | | __/ __|_   _|\n" +
+		"|  _/|   / (_) | | | _| (__  | |  \n" +
+		"|_|  |_|_\\\\___/\\_/ |___|\\___| |_|  \n"
+
+	line := "───────────────────────────────"
+
+	return fmt.Sprintf("%s%s\n%s\n",
+		titleStyle.Render(art),
+		dimStyle().Render(line),
+		dimStyle().Render(fmt.Sprintf("  v%s — Scaffold your next project in seconds", Version)),
 	)
 }
