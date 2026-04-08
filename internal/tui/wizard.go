@@ -102,11 +102,6 @@ func Run() (*config.ProjectConfig, error) {
 
 	cfg := &config.ProjectConfig{}
 	cwd, _ := os.Getwd()
-	defaultName := "my-project"
-	if cwd != "" {
-		defaultName = filepath.Base(cwd)
-	}
-	cfg.Name = defaultName
 
 	var stackChoice string
 
@@ -120,17 +115,16 @@ func Run() (*config.ProjectConfig, error) {
 					huh.NewInput().
 						Title("Project Name").
 						Description("lowercase, no spaces (will be auto-converted)").
-						Placeholder(defaultName).
+						Placeholder("my-project").
 						Validate(func(s string) error {
 							name := sanitizeName(s)
 							if name == "" {
-								name = defaultName
+								return fmt.Errorf("project name is required")
 							}
 							dir := filepath.Join(cwd, name)
 							if info, err := os.Stat(dir); err == nil && info.IsDir() {
 								return fmt.Errorf("directory %q already exists locally", name)
 							}
-							// Check if GitHub repo already exists (if gh is available)
 							if _, ghErr := exec.LookPath("gh"); ghErr == nil {
 								out, err := exec.Command("gh", "repo", "view", name, "--json", "name").CombinedOutput()
 								if err == nil && len(out) > 0 {
@@ -147,9 +141,6 @@ func Run() (*config.ProjectConfig, error) {
 			}
 			if err != nil {
 				return nil, err
-			}
-			if cfg.Name == "" {
-				cfg.Name = defaultName
 			}
 			cfg.Name = sanitizeName(cfg.Name)
 			step++

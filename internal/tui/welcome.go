@@ -3,24 +3,21 @@ package tui
 import (
 	"fmt"
 
+	figure "github.com/common-nighthawk/go-figure"
 	"github.com/charmbracelet/lipgloss"
 )
 
-const Version = "0.5.3"
+const Version = "0.5.4"
 
 func welcomeBanner() string {
-	// Use a plain style with just color — no margins or padding that break alignment
 	artStyle := lipgloss.NewStyle().Bold(true).Foreground(primary)
 
-	art := "" +
-		" ___  ___  ___    _ ___ ___ _____\n" +
-		"| _ \\| _ \\/ _ \\  | | __/ __|_   _|\n" +
-		"|  _/|   / (_) | | | _| (__  | |\n" +
-		"|_|  |_|_\\___/\\_/ |___|\\___| |_|"
+	fig := figure.NewFigure("PROJECT", "small", true)
+	art := fig.String()
 
-	line := "─────────────────────────────────"
+	line := "──────────────────────────────"
 
-	return fmt.Sprintf("\n%s\n%s\n%s\n",
+	return fmt.Sprintf("\n%s%s\n%s\n",
 		artStyle.Render(art),
 		dimStyle().Render(line),
 		dimStyle().Render(fmt.Sprintf("  v%s — Scaffold your next project in seconds", Version)),
