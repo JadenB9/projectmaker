@@ -104,8 +104,9 @@ func isAbort(err error) bool {
 	return err != nil && errors.Is(err, huh.ErrUserAborted)
 }
 
-// Run launches the TUI wizard and returns the completed config.
-func Run() (*config.ProjectConfig, error) {
+// Run launches the TUI wizard. It returns the completed config, or the
+// Projects folder the user chose to jump into instead of creating anything.
+func Run() (*config.ProjectConfig, string, error) {
 	fmt.Println(welcomeBanner())
 
 	cfg := &config.ProjectConfig{}
@@ -117,8 +118,8 @@ func Run() (*config.ProjectConfig, error) {
 	step := 0
 	for step >= 0 {
 		switch step {
-		case 0: // Project name
-			err := huh.NewForm(
+		case 0: // Project name — Up opens the Projects folder picker
+			form := huh.NewForm(
 				huh.NewGroup(
 					huh.NewInput().
 						Title("Project Name").
@@ -143,12 +144,17 @@ func Run() (*config.ProjectConfig, error) {
 						}).
 						Value(&cfg.Name),
 				),
-			).WithKeyMap(quitKeyMap()).Run()
-			if isAbort(err) {
-				return nil, nil
-			}
+			).WithKeyMap(quitKeyMap())
+
+			jumpDir, aborted, err := runNameStep(form, FindProjectDirs())
 			if err != nil {
-				return nil, err
+				return nil, "", err
+			}
+			if jumpDir != "" {
+				return nil, jumpDir, nil
+			}
+			if aborted {
+				return nil, "", nil
 			}
 			cfg.Name = sanitizeName(cfg.Name)
 			step++
@@ -186,7 +192,7 @@ func Run() (*config.ProjectConfig, error) {
 				continue
 			}
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			if stackChoice == backValue {
 				step--
@@ -232,7 +238,7 @@ func Run() (*config.ProjectConfig, error) {
 				continue
 			}
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 			step++
 
@@ -254,7 +260,7 @@ func Run() (*config.ProjectConfig, error) {
 				continue
 			}
 			if err != nil {
-				return nil, err
+				return nil, "", err
 			}
 
 			if !confirmed {
@@ -264,11 +270,11 @@ func Run() (*config.ProjectConfig, error) {
 
 			cfg.ProjectDir = filepath.Join(cwd, cfg.Name)
 			fmt.Println(successStyle.Render("\n  Let's build it!"))
-			return cfg, nil
+			return cfg, "", nil
 		}
 	}
 
-	return nil, nil
+	return nil, "", nil
 }
 
 // applyPreset copies a preset's config values into cfg.

@@ -46,10 +46,17 @@ func printHelp() {
 }
 
 func runCreate() {
-	cfg, err := tui.Run()
+	cfg, jumpDir, err := tui.Run()
 	if err != nil {
 		tui.PrintError(err.Error())
 		os.Exit(1)
+	}
+	if jumpDir != "" {
+		// User picked a Projects folder instead of creating something
+		fmt.Print("\033[2J\033[H")
+		tui.PrintDirReady(jumpDir)
+		jumpToShell(jumpDir)
+		return
 	}
 	if cfg == nil {
 		tui.PrintCancelled()
@@ -112,7 +119,11 @@ func runCreate() {
 	// Print welcome in the new project
 	tui.PrintProjectReady(cfg.Name)
 
-	// Exec a new shell in the project directory
+	jumpToShell(cfg.ProjectDir)
+}
+
+// jumpToShell replaces this process with a shell running inside dir.
+func jumpToShell(dir string) {
 	shell := os.Getenv("SHELL")
 	if shell == "" {
 		shell = "/bin/zsh"
@@ -121,7 +132,7 @@ func runCreate() {
 	if err != nil {
 		shellPath = shell
 	}
-	os.Chdir(cfg.ProjectDir)
+	os.Chdir(dir)
 	syscall.Exec(shellPath, []string{filepath.Base(shell)}, os.Environ())
 }
 

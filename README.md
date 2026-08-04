@@ -37,11 +37,30 @@ project version      # Show version
 - **Environment setup** — generates `.env` with placeholders and `.env.example`
 - **PROJECT_SPEC.md** — source of truth with manual steps at top, AI guidelines included
 - **Project removal** — `project remove` deletes local dir + GitHub repo with confirmation
+- **Jump to a Projects folder** — press Up at the name box to skip creating and drop straight into one of your Projects folders
 - **Descriptions everywhere** — every option explains what it does, beginner-friendly
+
+## Jumping into a Projects folder
+
+`project` still opens on the name box, so typing works exactly as before. Press
+**Up** there and it swaps to a folder picker listing your Projects directories —
+the iCloud ones (`Projects`, `Projects2026`, ...) plus the local `~/Projects` on
+this Mac, each with a note and project count:
+
+```
+  Project Directory
+
+  > Projects           iCloud — main project archive · 30 projects
+    Projects2026       iCloud — 2026 projects · 1 project
+    Projects (Local)   This Mac — local only, not synced · 0 projects
+```
+
+Arrow keys scroll, Enter drops you into that folder, Esc goes back to the name
+box. This mirrors the Project Directory menu in Mode Terminal.
 
 ## How it works
 
-1. Name your project (auto-lowercase, checks GitHub for conflicts)
+1. Name your project (auto-lowercase, checks GitHub for conflicts) — or press Up to jump into an existing Projects folder
 2. Pick a preset stack or build custom (Blank Project for GitHub-only setup)
 3. Select deployment targets and extras
 4. Confirm your choices

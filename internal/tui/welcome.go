@@ -8,7 +8,7 @@ import (
 	"github.com/charmbracelet/lipgloss"
 )
 
-const Version = "0.5.5"
+const Version = "0.6.0"
 
 func welcomeBanner() string {
 	colorStyle := lipgloss.NewStyle().Bold(true).Foreground(primary)

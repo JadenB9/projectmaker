@@ -2,6 +2,7 @@ package tui
 
 import (
 	"fmt"
+	"path/filepath"
 	"strings"
 	"time"
 
@@ -66,6 +67,14 @@ func PrintProjectReady(projectName string) {
 	fmt.Println(successStyle.Render("  Project ready. You're now in the project directory."))
 	fmt.Println()
 	fmt.Println(dimStyle().Render("  Run `cat PROJECT_SPEC.md` for setup details"))
+	fmt.Println()
+}
+
+// PrintDirReady displays a welcome message after jumping into a Projects folder.
+func PrintDirReady(dir string) {
+	fmt.Println()
+	fmt.Println(titleStyle.Render("  " + filepath.Base(dir)))
+	fmt.Println(successStyle.Render("  You're now in " + dir))
 	fmt.Println()
 }
 
